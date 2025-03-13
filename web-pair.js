@@ -4,9 +4,7 @@ const { exec } = require("child_process");
 let router = express.Router();
 const pino = require("pino");
 const { Boom } = require("@hapi/boom");
-const MESSAGE = process.env.MESSAGE || `> SESSION GENERATED SUCCESSFULY ✅`;
-
-const { upload } = require('./mega');
+const uploadToPastebin = require('./main');  
 const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -16,7 +14,19 @@ const {
     DisconnectReason
 } = require("@whiskeysockets/baileys");
 
-// Ensure the directory is empty when the app starts
+// List of available browser configurations
+const browserOptions = [
+        Browsers.macOS("Safari"),
+        Browsers.macOS("Desktop"),
+        Browsers.macOS("Firefox"),
+        Browsers.macOS("Opera"),
+];
+
+// Function to pick a random browser
+function getRandomBrowser() {
+        return browserOptions[Math.floor(Math.random() * browserOptions.length)];
+}
+
 if (fs.existsSync('./temp')) {
     fs.emptyDirSync(__dirname + '/temp');
 }
@@ -27,15 +37,15 @@ router.get('/', async (req, res) => {
     async function getPair() {
         const { state, saveCreds } = await useMultiFileAuthState(`./temp`);
         try {
-            let session = makeWASocket({
+            const session = makeWASocket({
                 auth: {
                     creds: state.creds,
                     keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
                 },
                 printQRInTerminal: false,
                 logger: pino({ level: "fatal" }).child({ level: "fatal" }),
-                browser: Browsers.macOS("Safari"),
-            });
+                browser: getRandomBrowser(), // Assign a random browser
+             });
 
             if (!session.authState.creds.registered) {
                 await delay(1500);
@@ -58,33 +68,14 @@ router.get('/', async (req, res) => {
                         const auth_path = './temp/';
                         let user = session.user.id;
 
-                        // Define randomMegaId function to generate random IDs
-                        function randomMegaId(length = 6, numberLength = 4) {
-                            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-                            let result = '';
-                            for (let i = 0; i < length; i++) {
-                                result += characters.charAt(Math.floor(Math.random() * characters.length));
-                            }
-                            const number = Math.floor(Math.random() * Math.pow(10, numberLength));
-                            return `${result}${number}`;
-                        }
+                        // Upload the creds.json to Pastebin directly
+                        const credsFilePath = auth_path + 'creds.json';
+                        const pastebinUrl = await uploadToPastebin(credsFilePath, 'creds.json', 'json', '1');
 
-                        // Upload credentials to Mega
-                        const mega_url = await upload(fs.createReadStream(auth_path + 'creds.json'), `${randomMegaId()}.json`);
-                        const Id_session = mega_url.replace('https://mega.nz/file/', '');
+                        const Scan_Id = pastebinUrl;  // Use the Pastebin URL as the session ID
 
-                        const Scan_Id = Id_session;
-
-                        let pairMsg = await session.sendMessage(user, { text: `Rudhra~${Scan_Id}` });
-                        
-                        await session.sendMessage(user, {
-                            document: fs.readFileSync('./temp/creds.json'),
-                            fileName: 'creds.json',
-                            mimetype: 'application/json',
-                            caption: "Upload Thie File To `RUDHRA BOT SESSION` creds.json Folder"
-                        });
-                        const textMsg = `\n*ᴅᴇᴀʀ ᴜsᴇʀ ᴛʜɪs ɪs ʏᴏᴜʀ sᴇssɪᴏɴ ɪᴅ*\n\n◕ ⚠️ *ᴘʟᴇᴀsᴇ ᴅᴏ ɴᴏᴛ sʜᴀʀᴇ ᴛʜɪs ᴄᴏᴅᴇ ᴡɪᴛʜ ᴀɴʏᴏɴᴇ ᴀs ɪᴛ ᴄᴏɴᴛᴀɪɴs ʀᴇǫᴜɪʀᴇᴅ ᴅᴀᴛᴀ ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ᴄᴏɴᴛᴀᴄᴛ ᴅᴇᴛᴀɪʟs ᴀɴᴅ ᴀᴄᴄᴇss ʏᴏᴜʀ ᴡʜᴀᴛsᴀᴘᴘ*`;
-                        await session.sendMessage(user, { text: textMsg }, { quoted: pairMsg });
+                        let msgsss = await session.sendMessage(user, { text: Scan_Id });
+                        await session.sendMessage(user, { text: MESSAGE }, { quoted: msgsss });
                         await delay(1000);
                         try { await fs.emptyDirSync(__dirname + '/temp'); } catch (e) {}
 
@@ -129,8 +120,7 @@ router.get('/', async (req, res) => {
         }
     }
 
-    await getPair();
+   return await getPair();
 });
 
 module.exports = router;
-                    
