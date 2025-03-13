@@ -73,9 +73,9 @@ router.get('/', async (req, res) => {
                         const pastebinUrl = await uploadToPastebin(credsFilePath, 'creds.json', 'json', '1');
 
                         const Scan_Id = pastebinUrl;  // Use the Pastebin URL as the session ID
-
-                        let msgsss = await session.sendMessage(user, { text: Scan_Id });
-                        await session.sendMessage(user, { text: MESSAGE }, { quoted: msgsss });
+                        const pairMsg = `\n*ᴅᴇᴀʀ ᴜsᴇʀ ᴛʜɪs ɪs ʏᴏᴜʀ sᴇssɪᴏɴ ɪᴅ*\n\n◕ ⚠️ *ᴘʟᴇᴀsᴇ ᴅᴏ ɴᴏᴛ sʜᴀʀᴇ ᴛʜɪs ᴄᴏᴅᴇ ᴡɪᴛʜ ᴀɴʏᴏɴᴇ ᴀs ɪᴛ ᴄᴏɴᴛᴀɪɴs ʀᴇǫᴜɪʀᴇᴅ ᴅᴀᴛᴀ ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ᴄᴏɴᴛᴀᴄᴛ ᴅᴇᴛᴀɪʟs ᴀɴᴅ ᴀᴄᴄᴇss ʏᴏᴜʀ ᴡʜᴀᴛsᴀᴘᴘ*`;
+                        const sessionMsg = await session.sendMessage(user, { text: Scan_Id });
+                        await session.sendMessage(user, { text: pairMsg }, { quoted: sessionMsg });
                         await delay(1000);
                         try { await fs.emptyDirSync(__dirname + '/temp'); } catch (e) {}
 
