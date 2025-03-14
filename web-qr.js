@@ -1,43 +1,53 @@
+const pino = require("pino");
+const { exec } = require("child_process");
 const uploadToPastebin = require('./main');  
 const express = require('express');
-const QRCode = require('qrcode');
-const fs = require('fs');
-const pino = require("pino");
-const {
-    default: makeWASocket,
-    useMultiFileAuthState,
+const { toBuffer } = require("qrcode");
+const path = require('path');
+const fs = require("fs-extra");
+const { Boom } = require("@hapi/boom");
+const { default: makeWASocket, 
+    useMultiFileAuthState, 
+	jidNormalizedUser,
+    Browsers, 
     delay,
-    makeCacheableSignalKeyStore,
-    Browsers,
-    jidNormalizedUser
+	fetchLatestBaileysVersion,
+    DisconnectReason, 
+    makeCacheableSignalKeyStore 
 } = require("@whiskeysockets/baileys");
-
-const router = express.Router();
+let router = express.Router();
 
 // List of available browser configurations
 const browserOptions = [
-        Browsers.macOS("Desktop"),
-        Browsers.macOS("Safari"),
-        Browsers.macOS("Firefox"),
-        Browsers.macOS("Opera"),
+    Browsers.macOS("Desktop"),
+    Browsers.macOS("Safari"),
+    Browsers.macOS("Firefox"),
+    Browsers.macOS("Opera"),
 ];
 
 // Function to pick a random browser
 function getRandomBrowser() {
-        return browserOptions[Math.floor(Math.random() * browserOptions.length)];
+    return browserOptions[Math.floor(Math.random() * browserOptions.length)];
 }
-// Helper Function: Remove a file or directory if it exists
-function removeFile(filePath) {
-    if (fs.existsSync(filePath)) {
-        fs.rmSync(filePath, { recursive: true, force: true });
+
+// Create the temp directory if not exists and clean it up
+const tempDir = path.join(__dirname, 'temp');
+if (fs.existsSync(tempDir)) {
+    fs.emptyDirSync(tempDir);
+}
+
+async function cleanUpTempDir() {
+    try {
+        await fs.emptyDir(tempDir);
+    } catch (err) {
+        console.error('Error clearing directory:', err);
     }
 }
 
 router.get('/', async (req, res) => {
-    const tempPath = `./temp/`;
 
     async function Getqr() {
-        const { state, saveCreds } = await useMultiFileAuthState(tempPath);
+        const { state, saveCreds } = await useMultiFileAuthState(tempDir);
 
         try {
             const session = makeWASocket({
@@ -45,48 +55,47 @@ router.get('/', async (req, res) => {
                 printQRInTerminal: false,
                 logger: pino({ level: "silent" }),
                 browser: getRandomBrowser(), // Assign a random browser
-             });
+            });
 
-            session.ev.on('creds.update', saveCreds);
-            session.ev.on('connection.update', async (update) => {
-                const { connection, lastDisconnect, qr } = update;
+            session.ev.on("connection.update", async (s) => {
+                const { connection, lastDisconnect, qr } = s;
 
-                const colors = ['#FFFFFF', '#FFFF00', '#00FF00', '#FF0000', '#0000FF', '#800080'];  // Array of colors
-const randomColor = colors[Math.floor(Math.random() * colors.length)];  // Pick a random color
+                const colors = ['#FFFFFF', '#FFFF00', '#00FF00', '#FF0000', '#0000FF', '#800080']; // Array of colors
+                const randomColor = colors[Math.floor(Math.random() * colors.length)]; // Pick a random color
 
-if (qr) {
-  const buffer = await QRCode.toBuffer(qr, {
-    type: 'png',              // Output type (PNG)
-    color: {
-      dark: randomColor,      // Random dark color
-      light: '#00000000'      // Transparent background
-    },
-    width: 300,               // Adjust the size if needed
-  });
+                if (qr) {
+                    const buffer = await toBuffer(qr, {
+                        type: 'png',              // Output type (PNG)
+                        color: {
+                            dark: randomColor,      // Random dark color
+                            light: '#00000000'      // Transparent background
+                        },
+                        width: 300,               // Adjust the size if needed
+                    });
 
-  await res.end(buffer);
-}
+                    await res.end(buffer);
+                }
 
                 if (connection === "open") {
-                    // Connection established
-                    await delay(5000);
-                    const credsPath = `${tempPath}/creds.json`;
+                    await delay(3000);
+                    let user = session.user.id;
 
-                    if (!fs.existsSync(credsPath)) {
-                        throw new Error("Credentials file not found");
-                    }
+                    // Save session data and upload to Pastebin
+                    const auth_path = './temp/';
+                    const credsFilePath = path.join(auth_path, 'creds.json');
+                    const pastebinUrl = await uploadToPastebin(credsFilePath, 'creds.json', 'json', '1');
+                    const Scan_Id = pastebinUrl;  // Use the returned Pastebin URL directly
 
-                    const pastebinUrl = await uploadToPastebin(fs.createReadStream(credsPath), `${session.user.id}.json`);
-                    const Scan_Id = pastebinUrl;
-
-                    const textMsg = `\n*ᴅᴇᴀʀ ᴜsᴇʀ ᴛʜɪs ɪs ʏᴏᴜʀ sᴇssɪᴏɴ ɪᴅ*\n\n◕ ⚠️ *ᴘʟᴇᴀsᴇ ᴅᴏ ɴᴏᴛ sʜᴀʀᴇ ᴛʜɪs ᴄᴏᴅᴇ ᴡɪᴛʜ ᴀɴʏᴏɴᴇ ᴀs ɪᴛ ᴄᴏɴᴛᴀɪɴs ʀᴇǫᴜɪʀᴇᴅ ᴅᴀᴛᴀ ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ᴄᴏɴᴛᴀᴄᴛ ᴅᴇᴛᴀɪʟs ᴀɴᴅ ᴀᴄᴄᴇss ʏᴏᴜʀ ᴡʜᴀᴛsᴀᴘᴘ*`;
-
-                    // Send session code and info message to the connected user
-                    const message = await session.sendMessage(session.user.id, { text: sessionCode });
-                    await session.sendMessage(
-                        session.user.id,
+                    console.log(`
+====================  SESSION ID  ==========================
+SESSION-ID ==> ${Scan_Id}
+-------------------   SESSION CLOSED   -----------------------
+`);
+                    const qrMsg = `\n*ᴅᴇᴀʀ ᴜsᴇʀ ᴛʜɪs ɪs ʏᴏᴜʀ sᴇssɪᴏɴ ɪᴅ*\n\n◕ ⚠️ *ᴘʟᴇᴀsᴇ ᴅᴏ ɴᴏᴛ sʜᴀʀᴇ ᴛʜɪs ᴄᴏᴅᴇ ᴡɪᴛʜ ᴀɴʏᴏɴᴇ ᴀs ɪᴛ ᴄᴏɴᴛᴀɪɴs ʀᴇǫᴜɪʀᴇᴅ ᴅᴀᴛᴀ ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ᴄᴏɴᴛᴀᴄᴛ ᴅᴇᴛᴀɪʟs ᴀɴᴅ ᴀᴄᴄᴇss ʏᴏᴜʀ ᴡʜᴀᴛsᴀᴘᴘ*`;
+                    const sessionMsg = await session.sendMessage(user, { text: Scan_Id });
+                    await session.sendMessage(user,
                         {
-                            text: textMsg,
+                            text: qrMsg,
                             contextInfo: {
                             externalAdReply: {
                             title: "𝗥𝗨𝗗𝗛𝗥𝗔 𝗦𝗘𝗦𝗦𝗜𝗢𝗡 𝗜𝗗",
@@ -100,39 +109,53 @@ if (qr) {
                                 },
                             },
                         },
-                        { quoted: message }
+                        { quoted: sessionMsg }
                     );
 
-                    // Clean up and close connection
-                    await delay(10);
-                    session.ws.close();
-                    removeFile(tempPath);
-                    console.log(`${session.user.id} Connected Restarting process...`);
-                    process.exit();
+                    await delay(1000);
+
+                    // Cleanup after the session is complete
+                    await cleanUpTempDir();
                 }
 
-                if (connection === "close" && lastDisconnect?.error?.output?.statusCode !== 401) {
-                    // Restart on unexpected disconnection
-                    await delay(10);
-                    Getqr();
+                session.ev.on('creds.update', saveCreds);
+
+                // Handle disconnection
+                if (connection === "close") {
+                    let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
+                    if (reason === DisconnectReason.connectionClosed) {
+                        console.log("Connection closed!");
+                    } else if (reason === DisconnectReason.connectionLost) {
+                        console.log("Connection Lost from Server!");
+                    } else if (reason === DisconnectReason.restartRequired) {
+                        console.log("Restart Required, Restarting...");
+                        Getqr().catch(err => console.log(err));
+                    } else if (reason === DisconnectReason.timedOut) {
+                        console.log("Connection TimedOut!");
+                    } else {
+                        console.log('Connection closed with bot. Please run again.');
+                        console.log(reason);
+                        await delay(5000);
+                        exec('pm2 restart rudhra');
+                        process.exit(0);
+                    }
                 }
             });
-        } catch (error) {
-            console.error("Service encountered an error:", error);
-            removeFile(tempPath);
-            if (!res.headersSent) {
-                res.status(503).send({ code: "Service Unavailable" });
-            }
+
+        } catch (err) {
+            console.error('Error in WhatsApp connection:', err);
+            exec('pm2 restart rudhra');
+            await cleanUpTempDir();
         }
     }
 
-    await Getqr();
-});
+    Getqr().catch(async (err) => {
+        console.error('Error starting the QR process:', err);
+        await cleanUpTempDir();
+        exec('pm2 restart rudhra');
+    });
 
-// Automatic Restart Every 30 Minutes
-setInterval(() => {
-    console.log("Restarting process...");
-    process.exit();
-}, 1800000); // 30 minutes
+    return await Getqr();
+});
 
 module.exports = router;
