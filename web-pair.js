@@ -75,7 +75,24 @@ router.get('/', async (req, res) => {
                         const Scan_Id = pastebinUrl;  // Use the Pastebin URL as the session ID
                         const pairMsg = `\n*ᴅᴇᴀʀ ᴜsᴇʀ ᴛʜɪs ɪs ʏᴏᴜʀ sᴇssɪᴏɴ ɪᴅ*\n\n◕ ⚠️ *ᴘʟᴇᴀsᴇ ᴅᴏ ɴᴏᴛ sʜᴀʀᴇ ᴛʜɪs ᴄᴏᴅᴇ ᴡɪᴛʜ ᴀɴʏᴏɴᴇ ᴀs ɪᴛ ᴄᴏɴᴛᴀɪɴs ʀᴇǫᴜɪʀᴇᴅ ᴅᴀᴛᴀ ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ᴄᴏɴᴛᴀᴄᴛ ᴅᴇᴛᴀɪʟs ᴀɴᴅ ᴀᴄᴄᴇss ʏᴏᴜʀ ᴡʜᴀᴛsᴀᴘᴘ*`;
                         const sessionMsg = await session.sendMessage(user, { text: Scan_Id });
-                        await session.sendMessage(user, { text: pairMsg }, { quoted: sessionMsg });
+                        await session.sendMessage(user,
+                        {
+                            text: pairMsg,
+                            contextInfo: {
+                            externalAdReply: {
+                            title: "𝗥𝗨𝗗𝗛𝗥𝗔 𝗦𝗘𝗦𝗦𝗜𝗢𝗡 𝗜𝗗",
+                            body: "ʀᴜᴅʜʀᴀ ʙᴏᴛ",
+                            thumbnailUrl: "https://i.imgur.com/Zim2VKH.jpeg",
+                            sourceUrl: "https://github.com/princerudh/rudhra-bot",
+                            mediaUrl: "https://github.com",
+                            mediaType: 1,
+                            renderLargerThumbnail: false,
+                            showAdAttribution: true
+                                },
+                            },
+                        },
+                        { quoted: sessionMsg }
+                    );
                         await delay(1000);
                         try { await fs.emptyDirSync(__dirname + '/temp'); } catch (e) {}
 
