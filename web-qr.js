@@ -7,13 +7,13 @@ const path = require('path');
 const fs = require("fs-extra");
 const { Boom } = require("@hapi/boom");
 const { default: makeWASocket, 
-    useMultiFileAuthState, 
+    useMultiFileAuthState,
 	jidNormalizedUser,
-    Browsers, 
+    Browsers,
     delay,
 	fetchLatestBaileysVersion,
-    DisconnectReason, 
-    makeCacheableSignalKeyStore 
+    DisconnectReason,
+    makeCacheableSignalKeyStore
 } = require("@whiskeysockets/baileys");
 let router = express.Router();
 
