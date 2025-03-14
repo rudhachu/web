@@ -8,10 +8,10 @@ const fs = require("fs-extra");
 const { Boom } = require("@hapi/boom");
 const { default: makeWASocket, 
     useMultiFileAuthState, 
-	jidNormalizedUser,
+   	jidNormalizedUser,
     Browsers, 
     delay,
-	fetchLatestBaileysVersion,
+   	fetchLatestBaileysVersion,
     DisconnectReason, 
     makeCacheableSignalKeyStore 
 } = require("@whiskeysockets/baileys");
