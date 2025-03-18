@@ -1,80 +1,39 @@
-const PastebinAPI = require('pastebin-js'),
-pastebin = new PastebinAPI('Q80IAWeVRBgHkz5GVKCnwZmc0iudKVgk')
-const {makeid} = require('./id');
 const express = require('express');
 const fs = require('fs');
+const { exec } = require("child_process");
 let router = express.Router()
 const pino = require("pino");
-const path = require('path');
 const {
     default: makeWASocket,
     useMultiFileAuthState,
     delay,
+    makeCacheableSignalKeyStore,
     Browsers,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore
+    jidNormalizedUser
 } = require("@whiskeysockets/baileys");
-// List of available browser configurations
-const browserOptions = [
-		Browsers.macOS("Safari"),
-		Browsers.macOS("Desktop"),
-		Browsers.macOS("Firefox"),
-		Browsers.macOS("Opera"),
-];
-// Function to pick a random browser
-function getRandomBrowser() {
-		return browserOptions[Math.floor(Math.random() * browserOptions.length)];
-}
+const { upload } = require('./id');
+
 function removeFile(FilePath) {
     if (!fs.existsSync(FilePath)) return false;
     fs.rmSync(FilePath, { recursive: true, force: true });
-};
-
-const specificFiles = [
-    'creds.json',
-    'app-state-sync-key-AAAAAED1.json',
-    'pre-key-1.json',
-    'pre-key-2.json',
-    'pre-key-3.json',
-    'pre-key-5.json',
-    'pre-key-6.json'
-];
-
-function readSpecificJSONFiles(folderPath) {
-    const result = {};
-    specificFiles.forEach(file => {
-        const filePath = path.join(folderPath, file);
-        if (fs.existsSync(filePath)) {
-            const fileContent = fs.readFileSync(filePath, 'utf-8');
-            result[file] = JSON.parse(fileContent);
-        } else {
-            console.warn(`File not found: ${filePath}`);
-        }
-    });
-    return result;
 }
 
-const {
-	readFile
-} = require("node:fs/promises")
-
 router.get('/', async (req, res) => {
-    const id = makeid();
     let num = req.query.number;
-
-    async function getPaire() {
-        const { state, saveCreds } = await useMultiFileAuthState('./temp/' + id);
+    async function megaPair() {
+        const { state, saveCreds } = await useMultiFileAuthState(`./temp`);
         try {
             let session = makeWASocket({
                 auth: {
                     creds: state.creds,
-                    keys: makeCacheableSignalKeyStore(state.keys, pino({level: "fatal"}).child({level: "fatal"})),
+                    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
                 },
                 printQRInTerminal: false,
-                logger: pino({level: "fatal"}).child({level: "fatal"}),
-                browser: getRandomBrowser(), // Assign a random browser
-});
-                       if (!session.authState.creds.registered) {
+                logger: pino({ level: "fatal" }).child({ level: "fatal" }),
+                browser: Browsers.macOS("Safari"),
+            });
+
+            if (!session.authState.creds.registered) {
                 await delay(1500);
                 num = num.replace(/[^0-9]/g, '');
                 const code = await session.requestPairingCode(num);
@@ -82,40 +41,56 @@ router.get('/', async (req, res) => {
                     await res.send({ code });
                 }
             }
-                  session.ev.on('creds.update', saveCreds);
 
+            session.ev.on('creds.update', saveCreds);
             session.ev.on("connection.update", async (s) => {
                 const { connection, lastDisconnect } = s;
+                if (connection === "open") {
+                    try {
+                        await delay(10000);
+                        const sessionD = fs.readFileSync('./temp/creds.json');
 
-                if (connection == "open") {
-               		await delay(10000);
-					const mergedJSON = await readSpecificJSONFiles(__dirname+`/temp/${id}/`);
-					fs.writeFileSync(__dirname+`/temp/${id}/${id}.json`, JSON.stringify(mergedJSON));
-					const output = await pastebin.createPasteFromFile(__dirname+`/temp/${id}/${id}.json`, "pastebin-js test", null, 1, "N");
-			    	let message = output.split('/')[3];
-                    let msg = `Rudhra~${message.split('').reverse().join('')}`;
-				    
-               	 await session.sendMessage(session.user.id, {
-						text: msg
-					})
-                     await delay(100);
-                    await session.ws.close();
-                    return await removeFile('./temp/' + id);
-                } else if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode != 401) {
+                        const auth_path = './temp/';
+                        const user_jid = jidNormalizedUser(session.user.id);
+
+                        const mega_url = await upload(fs.createReadStream(auth_path + 'creds.json'), `${user_jid}.json`);
+
+                        const string_session = mega_url.replace('https://mega.nz/file/', '');
+
+                        const sid = string_session;
+
+                        const dt = await session.sendMessage(user_jid, {
+                            text: sid
+                        });
+
+                    } catch (e) {
+                        exec('pm2 restart rudhra');
+                    }
+
+                    await delay(100);
+                    return await removeFile('./temp');
+                    process.exit(0);
+                } else if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode !== 401) {
                     await delay(10000);
-                    getPaire();
+                    megaPair();
                 }
             });
         } catch (err) {
-            console.log("service restated");
-            await removeFile('./temp/' + id);
+            exec('pm2 restart rudhra');
+            console.log("service restarted");
+            megaPair();
+            await removeFile('./temp');
             if (!res.headersSent) {
                 await res.send({ code: "Service Unavailable" });
             }
         }
     }
+    return await megaPair();
+});
 
-    return await getPaire();
+process.on('uncaughtException', function (err) {
+    console.log('Caught exception: ' + err);
+    exec('pm2 restart rudhra');
 });
 
 module.exports = router;
