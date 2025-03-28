@@ -1,27 +1,10 @@
-const mega = require("megajs");
-const auth = {
-    email: 'princerudh.in@gmail.com',
-    password: 'rudhra2025',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246'
+function makeid(num = 4) {
+  let result = "";
+  let characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  var characters9 = characters.length;
+  for (var i = 0; i < num; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters9));
+  }
+  return result;
 }
-
-const upload = (data, name) => {
-    return new Promise((resolve, reject) => {
-        try {
-            const storage = new mega.Storage(auth, () => {
-                data.pipe(storage.upload({name: name, allowUploadBuffering: true}));
-                storage.on("add", (file) => {
-                    file.link((err, url) => {
-                        if (err) throw err;
-                        storage.close()
-                        resolve(url);
-                    });
-                });
-            });
-        } catch (err) {
-            reject(err);
-        }
-    });
-};
-
-module.exports = { upload };
+module.exports = { makeid };
