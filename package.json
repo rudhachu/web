@@ -25,6 +25,7 @@
     "pm2": "^5.4.3",
     "pastebin-api": "^7.0.0",
     "pastebin-js":"latest",
+    "sharp": "^0.32.6"
     "async-mutex":"0.5.0"
    }
 }
