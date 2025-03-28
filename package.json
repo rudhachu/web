@@ -1,12 +1,17 @@
 {
 "name": "rudhra-web",
     "version": "1.0.0",
+    "type": "commonjs",
     "description": "A multi functional whatsapp bot Web paircode.",
     "main": "index.js",
+    "engines": {
+        "node": ">=20.0.0"
+  },
     "scripts": {
       "start": "pm2 start index.js --deep-monitoring --attach --name rudhra",
       "stop": "pm2 stop rudhra",
-     "restart": "pm2 restart rudhra"
+     "restart": "pm2 restart rudhra",
+     "dev": "nodemon index.js"
     },
   "dependencies": {
     "@whiskeysockets/baileys": "6.7.16",  
