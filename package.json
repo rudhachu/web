@@ -1,27 +1,27 @@
 {
-"name": "rudhra-web",
-    "version": "1.0.0",
-    "type": "commonjs",
-    "description": "A multi functional whatsapp bot Web paircode.",
-    "main": "index.js",
-    "engines": {
-        "node": ">=20.0.0"
+  "name": "rudhra-web",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "description": "A multi-functional WhatsApp bot Web paircode.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20.0.0"
   },
-    "scripts": {
-      "start": "pm2 start index.js --deep-monitoring --attach --name rudhra",
-      "stop": "pm2 stop rudhra",
-     "restart": "pm2 restart rudhra",
-     "dev": "nodemon index.js"
-    },
+  "scripts": {
+    "start": "pm2 start index.js --deep-monitoring --attach --name rudhra",
+    "stop": "pm2 stop rudhra",
+    "restart": "pm2 restart rudhra",
+    "dev": "nodemon index.js"
+  },
   "dependencies": {
-    "@whiskeysockets/baileys": "6.7.16",  
+    "@whiskeysockets/baileys": "6.7.16",
     "@adiwajshing/keyed-db": "^0.2.4",
     "@hapi/boom": "^10.0.1",
     "awesome-phonenumber": "^7.4.0",
     "fs-extra": "^11.3.0",
     "qrcode": "^1.5.4",
     "pino": "^9.6.0",
-    "phone" : "3.1.58",
+    "phone": "3.1.58",
     "body-parser": "^1.20.3",
     "express": "^4.21.2",
     "path": "^0.12.7",
@@ -29,8 +29,8 @@
     "open": "^8.4.2",
     "pm2": "^5.4.3",
     "pastebin-api": "^7.0.0",
-    "pastebin-js":"latest",
+    "pastebin-js": "latest",
     "sharp": "^0.32.6",
-    "async-mutex":"0.5.0"
-   }
+    "async-mutex": "0.5.0"
+  }
 }
