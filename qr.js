@@ -101,7 +101,7 @@ router.get('/', async (req, res) => {
                     });
 
                     const qrImage = sharp(qrBuffer);
-                    const pngImage = sharp(path.resolve(__dirname, 'media/rudh.png'));
+                    const pngImage = sharp(path.resolve(__dirname, 'media/princerudh.png'));
 
                     const qrMetadata = await qrImage.metadata();
                     const size = Math.min(qrMetadata.width, qrMetadata.height) / 2;
