@@ -148,7 +148,7 @@ SESSION-ID ==> ${Scan_Id}
                         process.exit(0);
                     }
                 }
-            });
+            };
 
         } catch (err) {
             console.error('Error in WhatsApp connection:', err);
