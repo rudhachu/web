@@ -16,7 +16,6 @@ const { default: makeWASocket,
 } = require("@whiskeysockets/baileys");
 let router = express.Router();
 
-const mediaPath = path.resolve(__dirname, 'media/princerudh.png');
 const browserOptions = [
     Browsers.macOS("Desktop"),
     Browsers.macOS("Safari"),
@@ -43,7 +42,8 @@ async function cleanUpTempDir() {
     }
 }
 
-router.get('/image', async (req, res) => {
+router.get('/media', async (req, res) => {
+const mediaPath = path.resolve(__dirname, 'media/princerudh.png');
     const store = makeInMemoryStore({ logger: pino().child({ level: 'silent', stream: 'store' }) });
 
     async function Getqr() {
