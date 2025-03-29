@@ -5,6 +5,7 @@ const express = require('express');
 const { toBuffer } = require("qrcode");
 const path = require('path');
 const fs = require("fs-extra");
+const sharp = require('sharp');
 const { Boom } = require("@hapi/boom");
 const { default: makeWASocket, 
     useMultiFileAuthState, 
@@ -59,20 +60,33 @@ router.get('/', async (req, res) => {
             session.ev.on("connection.update", async (s) => {
                 const { connection, lastDisconnect, qr } = s;
 
-                const colors = ['#FFFFFF', '#FFFF00', '#00FF00', '#FF0000', '#0000FF', '#800080']; // Array of colors
-                const randomColor = colors[Math.floor(Math.random() * colors.length)]; // Pick a random color
-
                 if (qr) {
-                    const buffer = await toBuffer(qr, {
-                        type: 'png',              // Output type (PNG)
+                    // Generate a QR code with a random dark color
+                    const colors = ['#FFFFFF', '#FFFF00', '#00FF00', '#FF0000', '#0000FF', '#800080'];
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+                    const qrBuffer = await QRCode.toBuffer(qr, {
+                        type: 'png',
                         color: {
-                            dark: randomColor,      // Random dark color
-                            light: '#00000000'      // Transparent background
+                            dark: randomColor,  // Random dark color
+                            light: '#00000000'  // Transparent background
                         },
-                        width: 300,               // Adjust the size if needed
+                        width: 300
                     });
 
-                    await res.end(buffer);
+                    const qrImage = sharp(qrBuffer);
+                    const pngImage = sharp(path.resolve(__dirname, 'media/princerudh.png'));
+
+                    const qrMetadata = await qrImage.metadata();
+                    const size = Math.min(qrMetadata.width, qrMetadata.height) / 2;
+                    const pngResized = pngImage.resize(size, size);
+
+                    const qrWithOverlay = await qrImage
+                        .composite([{ input: await pngResized.toBuffer(), gravity: 'centre' }])
+                        .toBuffer();
+
+                    res.setHeader('Content-Type', 'image/png');
+                    res.end(qrWithOverlay);
                 }
 
                 if (connection === "open") {
