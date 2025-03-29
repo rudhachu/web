@@ -16,7 +16,7 @@ const { default: makeWASocket,
 } = require("@whiskeysockets/baileys");
 let router = express.Router();
 
-// List of available browser configurations
+const mediaPath = path.resolve(__dirname, 'media/princerudh.png');
 const browserOptions = [
     Browsers.macOS("Desktop"),
     Browsers.macOS("Safari"),
@@ -61,11 +61,9 @@ router.get('/', async (req, res) => {
                 const { connection, lastDisconnect, qr } = s;
 
                 if (qr) {
-                    // Generate a QR code with a random dark color
-                    const colors = ['#FFFFFF', '#FFFF00', '#00FF00', '#FF0000', '#0000FF', '#800080'];
-                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-
-                    const qrBuffer = await QRCode.toBuffer(qr, {
+            const colors = ['#FFFFFF', '#FFFF00', '#00FF00', '#FF0000', '#0000FF', '#800080'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const qrBuffer = await QRCode.toBuffer(qr, {
                         type: 'png',
                         color: {
                             dark: randomColor,  // Random dark color
@@ -74,20 +72,16 @@ router.get('/', async (req, res) => {
                         width: 300
                     });
 
-                    const qrImage = sharp(qrBuffer);
-                    const pngImage = sharp(path.resolve(__dirname, 'media/princerudh.png'));
+            const qrImage = sharp(qrBuffer);
+            const pngImage = sharp(mediaPath);
+            const qrMetadata = await qrImage.metadata();
+            const size = Math.min(qrMetadata.width, qrMetadata.height) / 2;
+            const pngResized = pngImage.resize(size, size);
+            const qrWithOverlay = await qrImage.composite([{ input: await pngResized.toBuffer(), gravity: 'centre' }]).toBuffer();
 
-                    const qrMetadata = await qrImage.metadata();
-                    const size = Math.min(qrMetadata.width, qrMetadata.height) / 2;
-                    const pngResized = pngImage.resize(size, size);
-
-                    const qrWithOverlay = await qrImage
-                        .composite([{ input: await pngResized.toBuffer(), gravity: 'centre' }])
-                        .toBuffer();
-
-                    res.setHeader('Content-Type', 'image/png');
-                    res.end(qrWithOverlay);
-                }
+            res.setHeader('Content-Type', 'image/png');
+            return res.end(qrWithOverlay);
+        }
 
                 if (connection === "open") {
                     await delay(3000);
