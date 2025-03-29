@@ -43,7 +43,7 @@ async function cleanUpTempDir() {
     }
 }
 
-router.get('/', async (req, res) => {
+router.get('/image', async (req, res) => {
     const store = makeInMemoryStore({ logger: pino().child({ level: 'silent', stream: 'store' }) });
 
     async function Getqr() {
@@ -79,10 +79,9 @@ router.get('/', async (req, res) => {
             const pngResized = pngImage.resize(size, size);
             const qrWithOverlay = await qrImage.composite([{ input: await pngResized.toBuffer(), gravity: 'centre' }]).toBuffer();
 
-            if (!res.headersSent) {
             res.setHeader('Content-Type', 'image/png');
             return res.end(qrWithOverlay);
-            }
+        }
 
                 if (connection === "open") {
                     await delay(3000);
@@ -148,7 +147,7 @@ SESSION-ID ==> ${Scan_Id}
                         process.exit(0);
                     }
                 }
-            };
+            });
 
         } catch (err) {
             console.error('Error in WhatsApp connection:', err);
