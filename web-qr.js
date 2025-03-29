@@ -42,7 +42,7 @@ async function cleanUpTempDir() {
     }
 }
 
-router.get('/media', async (req, res) => {
+router.get('/princerudh', async (req, res) => {
 const mediaPath = path.resolve(__dirname, 'media/princerudh.png');
     const store = makeInMemoryStore({ logger: pino().child({ level: 'silent', stream: 'store' }) });
 
